@@ -1,0 +1,133 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .container {
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  h1 {
+    text-align: center;
+    color: #333;
+  }
+  
+  .form-section {
+    margin-bottom: 30px;
+  }
+  
+  h2 {
+    color: #555;
+  }
+  
+  label {
+    display: block;
+    margin-bottom: 5px;
+    color: #666;
+  }
+  
+  input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  button {
+    padding: 10px 15px;
+    background-color: #28a745;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background-color: #218838;
+  }
+  
+  button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  .response {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  
+  .loading {
+    margin-top: 10px;
+    color: #666;
+    font-style: italic;
+  }
+  
+  /* New styles for error handling and status display */
+  .error {
+    background-color: #fff8f8;
+    border-color: #f5c6cb;
+    color: #721c24;
+  }
+  
+  .error-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  
+  .error-details {
+    margin-bottom: 5px;
+  }
+  
+  .error-message {
+    font-style: italic;
+    margin-bottom: 10px;
+  }
+  
+  .error-solutions {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+  }
+  
+  .status-bar {
+    padding: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  .status-bar.connected {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+  }
+  
+  .status-bar.error {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+  }
+  
+  .troubleshooting-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+  }
+  
+  .troubleshooting-section h3 {
+    color: #555;
+  }
