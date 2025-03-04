@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { config } from './config';
+import { Logger } from './logger';
 
 // Initialize Express application
 const app = express();
@@ -41,7 +42,7 @@ const generateToken = (): string => {
   }
 };
 
-// Helper function to make API requests with retries and logging
+// Helper function to make API requests with retries and detailed logging
 async function makeApiRequest(endpoint: string, data: any, retries = config.MAX_RETRIES) {
   const token = generateToken();
   const url = `${config.API_URL}${endpoint}`;
@@ -55,42 +56,25 @@ async function makeApiRequest(endpoint: string, data: any, retries = config.MAX_
     }
   };
   
-  // Log the request details if debug mode is enabled
-  if (config.DEBUG) {
-    console.log('\n=== API Request ===');
-    console.log('URL:', url);
-    console.log('Headers:', JSON.stringify(requestConfig.headers, null, 2));
-    console.log('Payload:', JSON.stringify(data, null, 2));
-    console.log('===================\n');
-  }
+  // Enhanced detailed logging of the request
+  const requestId = Logger.logRequest(url, 'POST', requestConfig.headers, data);
   
   try {
     const response = await axios.post(url, data, requestConfig);
     
-    // Log the response if debug mode is enabled
-    if (config.DEBUG) {
-      console.log('\n=== API Response ===');
-      console.log('Status:', response.status);
-      console.log('Data:', JSON.stringify(response.data, null, 2));
-      console.log('====================\n');
-    }
+    // Enhanced detailed logging of the successful response
+    Logger.logResponse(requestId, response.status, response.data);
     
     return response;
   } catch (error: any) {
-    const axiosError = error as AxiosError;
-    
-    if (config.DEBUG) {
-      console.error('\n=== API Error ===');
-      console.error('Status:', axiosError.response?.status);
-      console.error('Data:', JSON.stringify(axiosError.response?.data, null, 2));
-      console.error('================\n');
-    }
+    // Enhanced detailed logging of the error
+    Logger.logError(requestId, error);
     
     // Retry logic for specific errors
     if (retries > 0 && (
-      !axiosError.response || 
-      axiosError.response.status >= 500 || 
-      axiosError.response.status === 429
+      !error.response || 
+      error.response.status >= 500 || 
+      error.response.status === 429
     )) {
       console.log(`Retrying request... (${config.MAX_RETRIES - retries + 1}/${config.MAX_RETRIES})`);
       return makeApiRequest(endpoint, data, retries - 1);
@@ -211,6 +195,17 @@ app.post('/validate-otp', async (req: Request<{}, {}, ValidateOtpRequest>, res: 
       });
     }
   }
+});
+
+// Add debugging endpoint to view logs
+app.get('/api/debug/logs', (req, res) => {
+  res.json(Logger.getLogs());
+});
+
+// Add debugging endpoint to clear logs
+app.post('/api/debug/logs/clear', (req, res) => {
+  Logger.clearLogs();
+  res.json({ message: 'Logs cleared successfully' });
 });
 
 // Add a route for the root path to ensure the app works correctly

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KYC API Debug Console</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #1e1e1e;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #61dafb;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        button:hover {
+            background-color: #1177bb;
+        }
+        .log-container {
+            background-color: #252526;
+            padding: 15px;
+            border-radius: 5px;
+            overflow: auto;
+            max-height: 70vh;
+        }
+        .log-entry {
+            margin-bottom: 20px;
+            border-left: 4px solid #555;
+            padding-left: 10px;
+        }
+        .log-entry.request {
+            border-left-color: #61dafb;
+        }
+        .log-entry.response {
+            border-left-color: #4caf50;
+        }
+        .log-entry.error {
+            border-left-color: #f44336;
+        }
+        .log-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .request .log-header {
+            color: #61dafb;
+        }
+        .response .log-header {
+            color: #4caf50;
+        }
+        .error .log-header {
+            color: #f44336;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 5px 0;
+        }
+        .timestamp {
+            color: #888;
+            font-size: 0.9em;
+        }
+        .empty-logs {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            padding: 20px;
+        }
+        .back-link {
+            margin-top: 20px;
+            display: block;
+            color: #61dafb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>KYC API Debug Console</h1>
+        <div class="controls">
+            <button onclick="refreshLogs()">Refresh Logs</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+            <button onclick="copyLogs()">Copy All to Clipboard</button>
+        </div>
+        <div class="log-container" id="logContainer">
+            <div class="empty-logs">Loading logs...</div>
+        </div>
+        <a href="/" class="back-link">← Back to KYC Testing</a>
+    </div>
+
+    <script>
+        // Fetch and display logs when the page loads
+        document.addEventListener('DOMContentLoaded', refreshLogs);
+
+        // Function to refresh logs from the server
+        async function refreshLogs() {
+            try {
+                const response = await fetch('/api/debug/logs');
+                const logs = await response.json();
+                displayLogs(logs);
+            } catch (error) {
+                document.getElementById('logContainer').innerHTML = 
+                    `<div class="log-entry error">
+                        <div class="log-header">Error loading logs</div>
+                        <pre>${error.message}</pre>
+                    </div>`;
+            }
+        }
+
+        // Function to clear logs
+        async function clearLogs() {
+            try {
+                await fetch('/api/debug/logs/clear', { method: 'POST' });
+                refreshLogs();
+            } catch (error) {
+                alert('Error clearing logs: ' + error.message);
+            }
+        }
+
+        // Function to copy logs to clipboard
+        function copyLogs() {
+            const logText = document.getElementById('logContainer').innerText;
+            navigator.clipboard.writeText(logText)
+                .then(() => alert('Logs copied to clipboard!'))
+                .catch(err => alert('Failed to copy logs: ' + err.message));
+        }
+
+        // Function to display logs in the UI
+        function displayLogs(logs) {
+            const container = document.getElementById('logContainer');
+            
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<div class="empty-logs">No logs available</div>';
+                return;
+            }
+            
+            // Sort logs by ID and group by request ID
+            const groupedLogs = {};
+            logs.forEach(log => {
+                if (!groupedLogs[log.id]) {
+                    groupedLogs[log.id] = [];
+                }
+                groupedLogs[log.id].push(log);
+            });
+            
+            // Generate HTML for each log group
+            let html = '';
+            Object.values(groupedLogs).reverse().forEach(logGroup => {
+                logGroup.forEach(log => {
+                    const logTypeClass = log.type === 'REQUEST' ? 'request' : 
+                                        log.type === 'RESPONSE' ? 'response' : 'error';
+                    
+                    html += `
+                    <div class="log-entry ${logTypeClass}">
+                        <div class="log-header">${log.message}</div>
+                        <div class="timestamp">${log.timestamp}</div>
+                        <pre>${JSON.stringify(log.data, null, 2)}</pre>
+                    </div>`;
+                });
+            });
+            
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
