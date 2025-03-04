@@ -1,0 +1,29 @@
+[REQ #1] POST https://uat.paysprint.in/sprintverify-uat/api/v1/verification/aadhaar_sendotp
+2025-03-04T09:18:32.049Z
+{
+  "headers": {
+    "Token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0aW1lc3RhbXAiOjE3NDEwNzk5MTIsInJlcWlkIjoiMmQ2YzY0ODUtMzExNy00ZmM2LWE0N2ItM2MxN2NhODhkMWRkIiwicGFydG5lcklkIjoiQ09SUDAwMDAxIiwiaWF0IjoxNzQxMDc5OTEyfQ.MGSQ9HImIYDe1HnU_iA0q1tAN9T-g79oHimwXvonrJo",
+    "Authorisedkey": "TVRJek5EVTJOelUwTnpKRFQxSlFNREF3TURFPQ==",
+    "Content-Type": "application/json",
+    "User-Agent": "CORP00001"
+  },
+  "body": {
+    "id_number": "788920135821"
+  }
+}
+[RES #1] Status: 200
+2025-03-04T09:18:32.319Z
+{
+  "status": 200,
+  "body": {
+    "statuscode": 200,
+    "status": true,
+    "message": "Success",
+    "data": {
+      "client_id": "aadhaar_v3_V88815886051801600959",
+      "otp_sent": true,
+      "if_number": true,
+      "valid_aadhaar": true
+    }
+  }
+}

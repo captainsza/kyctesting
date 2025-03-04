@@ -1,0 +1,23 @@
+[REQ #1] POST https://uat.paysprint.in/sprintverify-uat/api/v1/verification/aadhaar_sendotp
+2025-03-04T07:55:53.531Z
+{
+  "headers": {
+    "Token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0aW1lc3RhbXAiOjE3NDEwNzQ5NTMsInJlcWlkIjoiMmMyOWE3YzMtYzc4MC00NzRhLTk4MDUtNDNmM2FiNmU3NjE2IiwicGFydG5lcklkIjoiQ09SUDAwMDAxIiwiaWF0IjoxNzQxMDc0OTUzfQ.8c3ZWf751GuR40ZyVg0IB0TN9hVUXr3ETstOinuD-tM",
+    "Authorisedkey": "TVRJekSEVTJOelUwTnpKRFQxSIFNREF3TURFPQ==",
+    "Content-Type": "application/json",
+    "User-Agent": "CORP00001"
+  },
+  "body": {
+    "id_number": "123456789012"
+  }
+}
+[RES #1] Status: 201
+2025-03-04T07:55:53.760Z
+{
+  "status": 201,
+  "body": {
+    "statuscode": 201,
+    "status": false,
+    "message": "Invalid user.160.191.11.7"
+  }
+}
