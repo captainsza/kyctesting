@@ -7,7 +7,7 @@ import { format as formatDate } from 'date-fns';
 
 export class Logger {
   private static lastRequestId = 0;
-  private static logs: Array<{id: number, timestamp: string, type: string, message: string, data?: any}> = [];
+  private static logs: Array<{ id: number, timestamp: string, type: string, message: string, data?: any }> = [];
   private static readonly MAX_LOGS = 100; // Keep last 100 logs in memory
   private static logDir = path.join(__dirname, '../logs');
   private static logFile = path.join(Logger.logDir, `api_${formatDate(new Date(), 'yyyyMMdd')}.log`);
@@ -16,25 +16,22 @@ export class Logger {
    * Initialize the logger and create log directory if it doesn't exist
    */
   static initialize(): void {
-    // Create logs directory if it doesn't exist
     if (!fs.existsSync(this.logDir)) {
       fs.mkdirSync(this.logDir, { recursive: true });
     }
     
-    // Write header to log file
     const startupMessage = `\n========== KYC API Logger Started at ${new Date().toISOString()} ==========\n\n`;
     fs.appendFileSync(this.logFile, startupMessage);
     console.log(`Logger initialized. Writing logs to: ${this.logFile}`);
   }
 
   /**
-   * Log a request with all details (nothing hidden)
+   * Log a request with all details
    */
   static logRequest(url: string, method: string, headers: any, data?: any): number {
     const requestId = ++Logger.lastRequestId;
     const timestamp = new Date().toISOString();
     
-    // Create a full log message for the request
     const headerJson = JSON.stringify(headers, null, 2);
     const dataJson = data ? JSON.stringify(data, null, 2) : 'null';
     
@@ -48,26 +45,19 @@ export class Logger {
       `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
     ].join('\n');
     
-    // Log to console
     console.log(logMessage);
-    
-    // Write to file - complete unredacted information
     try {
       fs.appendFileSync(this.logFile, logMessage);
     } catch (err) {
       console.error('Error writing to log file:', err);
     }
     
-    // Store in memory (for API access)
     this.addLog({
       id: requestId,
       timestamp,
       type: 'REQUEST',
       message: `[REQ #${requestId}] ${method} ${url}`,
-      data: {
-        headers,
-        body: data
-      }
+      data: { headers, body: data }
     });
     
     return requestId;
@@ -88,26 +78,19 @@ export class Logger {
       `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
     ].join('\n');
     
-    // Log to console
     console.log(logMessage);
-    
-    // Write to file
     try {
       fs.appendFileSync(this.logFile, logMessage);
     } catch (err) {
       console.error('Error writing to log file:', err);
     }
     
-    // Store in memory
     this.addLog({
       id: requestId,
       timestamp,
       type: 'RESPONSE',
       message: `[RES #${requestId}] Status: ${status}`,
-      data: {
-        status,
-        body: data
-      }
+      data: { status, body: data }
     });
   }
 
@@ -135,17 +118,13 @@ export class Logger {
     
     const logMessage = logParts.join('\n');
     
-    // Log to console
     console.log(logMessage);
-    
-    // Write to file
     try {
       fs.appendFileSync(this.logFile, logMessage);
     } catch (err) {
       console.error('Error writing to log file:', err);
     }
     
-    // Store in memory
     this.addLog({
       id: requestId,
       timestamp,
@@ -164,8 +143,6 @@ export class Logger {
    */
   private static addLog(log: any): void {
     this.logs.push(log);
-    
-    // Trim logs if we exceed the maximum
     if (this.logs.length > this.MAX_LOGS) {
       this.logs = this.logs.slice(-this.MAX_LOGS);
     }

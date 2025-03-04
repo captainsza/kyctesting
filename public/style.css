@@ -131,3 +131,74 @@ body {
   .troubleshooting-section h3 {
     color: #555;
   }
+
+  /* New styles for verification steps and success messages */
+  .verification-steps {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  .verification-steps h3 {
+    margin-top: 0;
+    color: #555;
+  }
+  
+  .step {
+    margin-bottom: 8px;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    border-left: 4px solid #ddd;
+  }
+  
+  .step.pending {
+    border-left-color: #ddd;
+    color: #666;
+  }
+  
+  .step.active {
+    border-left-color: #007bff;
+    background-color: #f0f7ff;
+    color: #007bff;
+    font-weight: bold;
+  }
+  
+  .step.complete {
+    border-left-color: #28a745;
+    background-color: #f0fff4;
+    color: #28a745;
+  }
+  
+  .step.failed {
+    border-left-color: #dc3545;
+    background-color: #fff0f0;
+    color: #dc3545;
+  }
+  
+  .success-title {
+    font-weight: bold;
+    color: #28a745;
+    margin-bottom: 5px;
+    font-size: 1.1em;
+  }
+  
+  .success-details {
+    margin-bottom: 15px;
+  }
+  
+  .response.success {
+    background-color: #f0fff4;
+    border-color: #c3e6cb;
+  }
+  
+  pre {
+    margin-top: 10px;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    overflow-x: auto;
+  }

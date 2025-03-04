@@ -82,7 +82,6 @@ async function makeApiRequest(endpoint: string, data: any, token: string, retrie
 }
 
 // Combined route to send OTP and optionally validate it with the same token
-// @ts-ignore
 app.post('/send-otp', async (req: Request<{}, {}, SendAndValidateOtpRequest>, res: Response) => {
   const { id_number, otp } = req.body;
 
@@ -93,44 +92,47 @@ app.post('/send-otp', async (req: Request<{}, {}, SendAndValidateOtpRequest>, re
   console.log(`Processing request for Aadhar: ${id_number}${otp ? ' with OTP validation' : ''}`);
   
   try {
-    // Generate a single token to be used for both requests
+    // Generate a token for the API request
     const token = generateToken();
     
-    // Step 1: Send OTP
-    const sendOtpData = { id_number };
-    const sendOtpResponse = await makeApiRequest('verification/aadhaar_sendotp', sendOtpData, token);
-    
-    if (sendOtpResponse.data.status === false) {
-      console.log('Send OTP API returned error:', sendOtpResponse.data.message);
-      return res.status(400).json({ 
-        error: 'Send OTP API Error', 
-        details: sendOtpResponse.data.message 
-      });
-    }
-
-    // If OTP is not provided, return success for sending OTP
-    if (!otp) {
+    // If OTP is provided, we can directly do a verification with the OTP
+    // For testing environments, this skips the actual OTP sending
+    if (otp) {
+      console.log(`Direct verification with OTP for Aadhar: ${id_number}`);
+      const verifyData = { id_number, otp };
+      
+      const response = await makeApiRequest('verification/aadhaar_sendotp', verifyData, token);
+      
+      if (response.data.status === false) {
+        console.log('API returned error:', response.data.message);
+        return res.status(400).json({ 
+          error: 'KYC Verification Failed', 
+          details: response.data.message 
+        });
+      }
+      
       return res.json({ 
-        message: 'OTP sent successfully'
+        message: 'KYC Verification Successful', 
+        data: response.data 
       });
     }
-
-    // Step 2: Validate OTP using the same token if OTP is provided
-    console.log(`Validating OTP for Aadhar: ${id_number} with OTP: ${otp}`);
-    const validateOtpData = { id_number, otp };
-    const validateOtpResponse = await makeApiRequest('verification/aadhaar_sendotp', validateOtpData, token);
     
-    if (validateOtpResponse.data.status === false) {
-      console.log('Validate OTP API returned error:', validateOtpResponse.data.message);
+    // Regular flow - just send OTP
+    console.log(`Sending OTP for Aadhar: ${id_number}`);
+    const sendOtpData = { id_number };
+    const response = await makeApiRequest('verification/aadhaar_sendotp', sendOtpData, token);
+    
+    if (response.data.status === false) {
+      console.log('API returned error:', response.data.message);
       return res.status(400).json({ 
-        error: 'Validate OTP API Error', 
-        details: validateOtpResponse.data.message 
+        error: 'Send OTP Failed', 
+        details: response.data.message 
       });
     }
     
     return res.json({ 
-      message: 'OTP validated successfully', 
-      data: validateOtpResponse.data 
+      message: 'OTP sent successfully', 
+      data: response.data 
     });
   } catch (error: any) {
     console.error('API error:', error.message);
