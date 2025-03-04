@@ -4,181 +4,555 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KYC API Debug Console</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        body {
-            font-family: 'Courier New', Courier, monospace;
-            background-color: #1e1e1e;
-            color: #f0f0f0;
+        :root {
+            --bg-color: #f5f5f5;
+            --panel-bg: #fff;
+            --header-bg: #f0f0f0;
+            --text-color: #333;
+            --border-color: #ddd;
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --panel-bg: #2d2d2d;
+            --header-bg: #252525;
+            --text-color: #e0e0e0;
+            --border-color: #444;
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        
+        * {
+            box-sizing: border-box;
             margin: 0;
-            padding: 20px;
+            padding: 0;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+            transition: background-color 0.3s;
         }
-        h1 {
-            color: #61dafb;
-            border-bottom: 1px solid #444;
-            padding-bottom: 10px;
+        
+        .debug-container {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            grid-template-rows: auto 1fr auto;
+            grid-template-areas:
+                "header header"
+                "sidebar main"
+                "footer footer";
+            height: 100vh;
         }
-        .controls {
-            margin: 20px 0;
+        
+        .debug-header {
+            grid-area: header;
+            background-color: var(--header-bg);
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .debug-header h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header-actions {
             display: flex;
             gap: 10px;
         }
-        button {
-            background-color: #0e639c;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            cursor: pointer;
-            font-family: inherit;
-        }
-        button:hover {
-            background-color: #1177bb;
-        }
-        .log-container {
-            background-color: #252526;
+        
+        .debug-sidebar {
+            grid-area: sidebar;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
             padding: 15px;
-            border-radius: 5px;
-            overflow: auto;
-            max-height: 70vh;
         }
-        .log-entry {
+        
+        .debug-content {
+            grid-area: main;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .debug-footer {
+            grid-area: footer;
+            background-color: var(--header-bg);
+            padding: 10px 20px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        .sidebar-section {
             margin-bottom: 20px;
-            border-left: 4px solid #555;
-            padding-left: 10px;
         }
-        .log-entry.request {
-            border-left-color: #61dafb;
+        
+        .sidebar-section h3 {
+            margin-bottom: 10px;
+            font-size: 1rem;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
-        .log-entry.response {
-            border-left-color: #4caf50;
+        
+        .filter-group {
+            margin-bottom: 15px;
         }
-        .log-entry.error {
-            border-left-color: #f44336;
+        
+        .filter-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 5px;
+            cursor: pointer;
         }
-        .log-header {
+        
+        .filter-group input[type="checkbox"] {
+            margin: 0;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-block {
+            display: flex;
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
             font-weight: bold;
+        }
+        
+        .badge-success {
+            background-color: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+        }
+        
+        .badge-info {
+            background-color: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+        }
+        
+        .badge-error {
+            background-color: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+        
+        .log-container {
+            background-color: var(--panel-bg);
+            border-radius: 4px;
+            box-shadow: var(--shadow);
+            overflow: auto;
+            flex-grow: 1;
+            padding: 0;
+            border: 1px solid var(--border-color);
+            margin: 15px;
+        }
+        
+        .search-tools {
+            padding: 10px 15px;
+            background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .search-input {
+            flex-grow: 1;
+            position: relative;
+        }
+        
+        .search-input input {
+            width: 100%;
+            padding: 8px 30px 8px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+        }
+        
+        .search-input i {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #777;
+        }
+        
+        .logs {
+            padding: 0;
+            overflow: auto;
+            height: calc(100vh - 174px);
+        }
+        
+        .log-card {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s;
+        }
+        
+        .log-card:hover {
+            background-color: rgba(0,0,0,0.02);
+        }
+        
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 5px;
         }
-        .request .log-header {
-            color: #61dafb;
+        
+        .log-title {
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
-        .response .log-header {
-            color: #4caf50;
+        
+        .log-timestamp {
+            font-size: 0.85rem;
+            color: #777;
         }
-        .error .log-header {
-            color: #f44336;
+        
+        .log-details {
+            margin-top: 5px;
+            border-left: 3px solid #ddd;
+            padding-left: 10px;
         }
+        
+        .log-details.request {
+            border-left-color: var(--primary-color);
+        }
+        
+        .log-details.response {
+            border-left-color: var(--secondary-color);
+        }
+        
+        .log-details.error {
+            border-left-color: var(--danger-color);
+        }
+        
+        .log-section {
+            margin-bottom: 8px;
+        }
+        
+        .log-section-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .log-section-content {
+            background-color: rgba(0,0,0,0.03);
+            border-radius: 4px;
+            padding: 8px;
+            overflow: auto;
+            max-height: 300px;
+        }
+        
+        .collapsed .log-section-content {
+            display: none;
+        }
+        
+        .theme-switch {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            color: var(--primary-color);
+        }
+        
         pre {
+            margin: 0;
             white-space: pre-wrap;
             word-wrap: break-word;
-            margin: 5px 0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
         }
-        .timestamp {
-            color: #888;
-            font-size: 0.9em;
-        }
-        .empty-logs {
+        
+        .no-logs {
+            padding: 20px;
             text-align: center;
             color: #888;
             font-style: italic;
-            padding: 20px;
         }
-        .back-link {
-            margin-top: 20px;
-            display: block;
-            color: #61dafb;
+        
+        @media (max-width: 768px) {
+            .debug-container {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "header"
+                    "main"
+                    "footer";
+            }
+            .debug-sidebar {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>KYC API Debug Console</h1>
-        <div class="controls">
-            <button onclick="refreshLogs()">Refresh Logs</button>
-            <button onclick="clearLogs()">Clear Logs</button>
-            <button onclick="copyLogs()">Copy All to Clipboard</button>
-        </div>
-        <div class="log-container" id="logContainer">
-            <div class="empty-logs">Loading logs...</div>
-        </div>
-        <a href="/" class="back-link">← Back to KYC Testing</a>
-    </div>
-
-    <script>
-        // Fetch and display logs when the page loads
-        document.addEventListener('DOMContentLoaded', refreshLogs);
-
-        // Function to refresh logs from the server
-        async function refreshLogs() {
-            try {
-                const response = await fetch('/api/debug/logs');
-                const logs = await response.json();
-                displayLogs(logs);
-            } catch (error) {
-                document.getElementById('logContainer').innerHTML = 
-                    `<div class="log-entry error">
-                        <div class="log-header">Error loading logs</div>
-                        <pre>${error.message}</pre>
-                    </div>`;
-            }
-        }
-
-        // Function to clear logs
-        async function clearLogs() {
-            try {
-                await fetch('/api/debug/logs/clear', { method: 'POST' });
-                refreshLogs();
-            } catch (error) {
-                alert('Error clearing logs: ' + error.message);
-            }
-        }
-
-        // Function to copy logs to clipboard
-        function copyLogs() {
-            const logText = document.getElementById('logContainer').innerText;
-            navigator.clipboard.writeText(logText)
-                .then(() => alert('Logs copied to clipboard!'))
-                .catch(err => alert('Failed to copy logs: ' + err.message));
-        }
-
-        // Function to display logs in the UI
-        function displayLogs(logs) {
-            const container = document.getElementById('logContainer');
+    <div class="debug-container">
+        <header class="debug-header">
+            <h1>
+                <i class="fas fa-bug"></i> KYC API Debug Console
+            </h1>
+            <div class="header-actions">
+                <span class="status-badge badge-info" id="connectionStatus">
+                    <i class="fas fa-spinner fa-spin"></i> Checking connection...
+                </span>
+                <span class="theme-switch" onclick="toggleTheme()">
+                    <i class="fas fa-moon"></i>
+                </span>
+            </div>
+        </header>
+        
+        <aside class="debug-sidebar">
+            <div class="sidebar-section">
+                <h3><i class="fas fa-filter"></i> Filters</h3>
+                
+                <div class="filter-group">
+                    <p>Log Type:</p>
+                    <label>
+                        <input type="checkbox" checked class="type-filter" value="request"> Requests
+                    </label>
+                    <label>
+                        <input type="checkbox" checked class="type-filter" value="response"> Responses
+                    </label>
+                    <label>
+                        <input type="checkbox" checked class="type-filter" value="error"> Errors
+                    </label>
+                </div>
+                
+                <button class="btn btn-danger btn-block" onclick="clearLogs()">
+                    <i class="fas fa-trash-alt"></i> Clear Logs
+                </button>
+            </div>
             
-            if (!logs || logs.length === 0) {
-                container.innerHTML = '<div class="empty-logs">No logs available</div>';
+            <div class="sidebar-section">
+                <h3><i class="fas fa-chart-pie"></i> Stats</h3>
+                <div class="stats-container" id="statsContainer">
+                    <p>Total Logs: <b id="totalLogs">0</b></p>
+                    <p>Requests: <b id="requestCount">0</b></p>
+                    <p>Responses: <b id="responseCount">0</b></p>
+                    <p>Errors: <b id="errorCount">0</b></p>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3><i class="fas fa-link"></i> Quick Links</h3>
+                <p><a href="/" style="color: var(--primary-color);"><i class="fas fa-home"></i> Back to KYC Testing</a></p>
+            </div>
+        </aside>
+        
+        <main class="debug-content">
+            <div class="search-tools">
+                <div class="search-input">
+                    <input type="text" id="searchInput" placeholder="Search logs..." onkeyup="filterLogs()">
+                    <i class="fas fa-search"></i>
+                </div>
+                <button class="btn btn-primary" onclick="refreshLogs()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <button class="btn btn-primary" onclick="copyLogs()">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+            </div>
+            
+            <div class="log-container">
+                <div class="logs" id="logContainer">
+                    <div class="no-logs">Loading logs...</div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="debug-footer">
+            <p>KYC Testing Debug Console</p>
+        </footer>
+    </div>
+    
+    <script>
+        let allLogs = [];
+        let isDarkMode = localStorage.getItem('darkMode') === 'enabled';
+        
+        if (isDarkMode) document.body.classList.add('dark-mode');
+        
+        // Fetch and display logs when the page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            await checkConnection();
+            await loadLogs();
+        });
+        
+        async function checkConnection() {
+            try {
+                const response = await fetch('/api/status');
+                if (response.ok) {
+                    document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-check-circle"></i> Connected';
+                    document.getElementById('connectionStatus').className = 'status-badge badge-success';
+                } else {
+                    document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-exclamation-circle"></i> API Error';
+                    document.getElementById('connectionStatus').className = 'status-badge badge-error';
+                }
+            } catch (error) {
+                document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-exclamation-circle"></i> Disconnected';
+                document.getElementById('connectionStatus').className = 'status-badge badge-error';
+            }
+        }
+        
+        async function loadLogs() {
+            try {
+                const response = await fetch('/api/logs');
+                if (response.ok) {
+                    allLogs = await response.json();
+                    updateStats();
+                    renderLogs();
+                } else {
+                    document.getElementById('logContainer').innerHTML = '<div class="no-logs">Failed to load logs</div>';
+                }
+            } catch (error) {
+                document.getElementById('logContainer').innerHTML = '<div class="no-logs">Error loading logs: ' + error.message + '</div>';
+            }
+        }
+        
+        function updateStats() {
+            document.getElementById('totalLogs').textContent = allLogs.length;
+            document.getElementById('requestCount').textContent = allLogs.filter(log => log.type === 'request').length;
+            document.getElementById('responseCount').textContent = allLogs.filter(log => log.type === 'response').length;
+            document.getElementById('errorCount').textContent = allLogs.filter(log => log.type === 'error').length;
+        }
+        
+        function renderLogs() {
+            const container = document.getElementById('logContainer');
+            if (allLogs.length === 0) {
+                container.innerHTML = '<div class="no-logs">No logs found</div>';
                 return;
             }
             
-            // Sort logs by ID and group by request ID
-            const groupedLogs = {};
-            logs.forEach(log => {
-                if (!groupedLogs[log.id]) {
-                    groupedLogs[log.id] = [];
-                }
-                groupedLogs[log.id].push(log);
-            });
+            container.innerHTML = allLogs.map(log => createLogCard(log)).join('');
+        }
+        
+        function createLogCard(log) {
+            // Implementation of log card creation
+            return `<div class="log-card" data-type="${log.type}">
+                <div class="log-header">
+                    <div class="log-title">
+                        <i class="fas fa-${log.type === 'request' ? 'arrow-right' : log.type === 'response' ? 'arrow-left' : 'exclamation-circle'}"></i>
+                        ${log.title || log.type.charAt(0).toUpperCase() + log.type.slice(1)}
+                    </div>
+                    <div class="log-timestamp">${new Date(log.timestamp).toLocaleString()}</div>
+                </div>
+                <div class="log-details ${log.type}">
+                    <pre>${JSON.stringify(log.data, null, 2)}</pre>
+                </div>
+            </div>`;
+        }
+        
+        function filterLogs() {
+            // Implementation of log filtering
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const selectedTypes = Array.from(document.querySelectorAll('.type-filter:checked')).map(el => el.value);
             
-            // Generate HTML for each log group
-            let html = '';
-            Object.values(groupedLogs).reverse().forEach(logGroup => {
-                logGroup.forEach(log => {
-                    const logTypeClass = log.type === 'REQUEST' ? 'request' : 
-                                        log.type === 'RESPONSE' ? 'response' : 'error';
-                    
-                    html += `
-                    <div class="log-entry ${logTypeClass}">
-                        <div class="log-header">${log.message}</div>
-                        <div class="timestamp">${log.timestamp}</div>
-                        <pre>${JSON.stringify(log.data, null, 2)}</pre>
-                    </div>`;
-                });
-            });
+            const filteredLogs = allLogs.filter(log => 
+                selectedTypes.includes(log.type) && 
+                JSON.stringify(log).toLowerCase().includes(searchTerm)
+            );
             
-            container.innerHTML = html;
+            renderFilteredLogs(filteredLogs);
+        }
+        
+        function renderFilteredLogs(logs) {
+            const container = document.getElementById('logContainer');
+            if (logs.length === 0) {
+                container.innerHTML = '<div class="no-logs">No matching logs found</div>';
+                return;
+            }
+            
+            container.innerHTML = logs.map(log => createLogCard(log)).join('');
+        }
+        
+        function clearLogs() {
+            if (confirm('Are you sure you want to clear all logs?')) {
+                allLogs = [];
+                renderLogs();
+                updateStats();
+            }
+        }
+        
+        function refreshLogs() {
+            loadLogs();
+        }
+        
+        function copyLogs() {
+            navigator.clipboard.writeText(JSON.stringify(allLogs, null, 2))
+                .then(() => alert('Logs copied to clipboard'))
+                .catch(err => alert('Failed to copy logs: ' + err));
+        }
+        
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            isDarkMode = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDarkMode ? 'enabled' : 'disabled');
         }
     </script>
 </body>

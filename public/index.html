@@ -5,46 +5,143 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aadhar KYC Verification</title>
     <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <div class="container">
-        <h1>Aadhar KYC Verification</h1>
-        <div id="connection-status" class="status-bar">Checking API connection...</div>
+        <header>
+            <h1><i class="fas fa-shield-alt"></i> Aadhar KYC Verification</h1>
+            <div id="connection-status" class="status-bar">
+                <i class="fas fa-sync fa-spin"></i> Checking API connection...
+            </div>
+        </header>
 
-        <!-- Simplified One-Click Verification Form -->
-        <div class="form-section">
-            <h2>One-Click KYC Verification</h2>
-            <p>Enter your Aadhar number and click Verify to complete the KYC process.</p>
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-id-card"></i> Verify Identity</h2>
+                <span class="badge" id="mode-badge">Test Mode</span>
+            </div>
             
-            <label for="aadhar">Aadhar Number:</label>
-            <input type="text" id="aadhar" placeholder="Enter 12-digit Aadhar Number" maxlength="12">
-            
-            <button id="verifyBtn" onclick="verifyAadhar()">Verify KYC</button>
-            <div id="loading" class="loading" style="display: none;">Processing verification...</div>
-            <div id="response" class="response" style="display: none;"></div>
+            <div class="card-body">
+                <p class="description">Enter your Aadhar number to complete the KYC verification process.</p>
+                
+                <div class="input-group">
+                    <label for="aadhar">Aadhar Number:</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-fingerprint icon-left"></i>
+                        <input type="text" id="aadhar" placeholder="12-digit Aadhar Number" maxlength="12" 
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    </div>
+                    <div class="input-validation" id="aadhar-validation"></div>
+                </div>
+                
+                <button id="verifyBtn" class="primary-btn" onclick="verifyAadhar()">
+                    <i class="fas fa-check-circle"></i> Verify Now
+                </button>
+                
+                <div id="loading" class="loading-container" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Processing verification...</div>
+                </div>
+            </div>
         </div>
         
-        <div class="verification-steps">
-            <h3>Verification Process:</h3>
-            <ol>
-                <li id="step1" class="step">Send verification request</li>
-                <li id="step2" class="step">Process verification automatically</li>
-                <li id="step3" class="step">Receive KYC verification result</li>
-            </ol>
+        <div class="card" id="result-card" style="display: none;">
+            <div class="card-header">
+                <h2><i class="fas fa-clipboard-check"></i> Verification Result</h2>
+                <button class="icon-btn" onclick="copyResult()" title="Copy to clipboard">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="response" class="response"></div>
+            </div>
+        </div>
+
+        <div class="process-timeline">
+            <h3><i class="fas fa-tasks"></i> Verification Process</h3>
+            <div class="timeline">
+                <div class="timeline-item" id="step1">
+                    <div class="timeline-icon pending">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h4>Send Request</h4>
+                        <p>Submit Aadhar number to initiate verification</p>
+                    </div>
+                </div>
+                <div class="timeline-item" id="step2">
+                    <div class="timeline-icon pending">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h4>Process</h4>
+                        <p>Server processes the verification request</p>
+                    </div>
+                </div>
+                <div class="timeline-item" id="step3">
+                    <div class="timeline-icon pending">
+                        <i class="fas fa-check-double"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h4>Verify</h4>
+                        <p>Confirm identity and complete KYC</p>
+                    </div>
+                </div>
+            </div>
         </div>
         
-        <div class="troubleshooting-section">
-            <h3>Troubleshooting</h3>
-            <p>If you're experiencing issues with the KYC verification, try the following:</p>
-            <ul>
-                <li>Verify that your API credentials are correct in the config.ts file</li>
-                <li>Ensure your IP address is whitelisted with the API provider</li>
-                <li><a href="/debug.html" target="_blank">Open Debug Console</a> to view detailed API logs</li>
-            </ul>
+        <div class="card help-card">
+            <div class="card-header">
+                <h3><i class="fas fa-question-circle"></i> Help & Troubleshooting</h3>
+            </div>
+            <div class="card-body">
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <i class="fas fa-chevron-right"></i> What is KYC verification?
+                        </div>
+                        <div class="accordion-content">
+                            <p>KYC (Know Your Customer) is a process to verify the identity of customers. 
+                            The Aadhar-based KYC uses your Aadhar number and OTP verification to confirm your identity.</p>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <i class="fas fa-chevron-right"></i> Troubleshooting Common Issues
+                        </div>
+                        <div class="accordion-content">
+                            <ul>
+                                <li>Ensure you've entered a valid 12-digit Aadhar number</li>
+                                <li>Check if your IP address is whitelisted with the API provider</li>
+                                <li>Verify API credentials in the configuration</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <i class="fas fa-chevron-right"></i> Developer Tools
+                        </div>
+                        <div class="accordion-content">
+                            <p>Access the following tools for debugging:</p>
+                            <a href="/debug.html" class="text-btn" target="_blank">
+                                <i class="fas fa-external-link-alt"></i> Open Debug Console
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+        
+        <footer>
+            <p>© 2023 KYC Testing Tool - <a href="#" onclick="toggleTheme()">Toggle Dark Mode</a></p>
+        </footer>
     </div>
 
     <script>
+        let isDarkMode = localStorage.getItem('darkMode') === 'enabled';
+        if (isDarkMode) document.body.classList.add('dark-mode');
+        
         // Check connection status when page loads
         document.addEventListener('DOMContentLoaded', async function() {
             try {
@@ -52,14 +149,63 @@
                 const response = await fetch('/api/config-status');
                 const data = await response.json();
                 
-                statusBar.textContent = `Connected to API: ${data.apiUrl} (Partner ID: ${data.partnerId})`;
+                if (data.testingMode) {
+                    document.getElementById('mode-badge').textContent = 'Test Mode';
+                    document.getElementById('mode-badge').classList.add('test-mode');
+                } else {
+                    document.getElementById('mode-badge').textContent = 'Production Mode';
+                    document.getElementById('mode-badge').classList.add('prod-mode');
+                }
+                
+                statusBar.innerHTML = `<i class="fas fa-check-circle"></i> Connected to API: ${data.apiUrl}`;
                 statusBar.classList.add('connected');
             } catch (error) {
                 const statusBar = document.getElementById('connection-status');
-                statusBar.textContent = 'Error connecting to API. Check server logs.';
+                statusBar.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error connecting to API`;
                 statusBar.classList.add('error');
             }
+            
+            // Add input validation for Aadhar
+            const aadharInput = document.getElementById('aadhar');
+            aadharInput.addEventListener('input', validateAadhar);
+            aadharInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' && isValidAadhar(this.value)) {
+                    verifyAadhar();
+                }
+            });
         });
+        
+        // Validate Aadhar input as user types
+        function validateAadhar() {
+            const aadhar = document.getElementById('aadhar').value;
+            const validationDiv = document.getElementById('aadhar-validation');
+            
+            if (!aadhar) {
+                validationDiv.textContent = '';
+                return;
+            }
+            
+            if (!/^\d+$/.test(aadhar)) {
+                validationDiv.textContent = 'Only numbers are allowed';
+                validationDiv.className = 'input-validation error';
+                return;
+            }
+            
+            if (aadhar.length < 12) {
+                validationDiv.textContent = `${aadhar.length}/12 digits entered`;
+                validationDiv.className = 'input-validation warning';
+                return;
+            }
+            
+            if (aadhar.length === 12) {
+                validationDiv.textContent = 'Valid Aadhar format';
+                validationDiv.className = 'input-validation success';
+                return;
+            }
+            
+            validationDiv.textContent = 'Aadhar should be exactly 12 digits';
+            validationDiv.className = 'input-validation error';
+        }
         
         // Validate Aadhar number format (12 digits)
         function isValidAadhar(aadhar) {
@@ -72,7 +218,7 @@
             let output = '';
             
             if (error.error) {
-                output += `<div class="error-title">${error.error}</div>`;
+                output += `<div class="error-title"><i class="fas fa-exclamation-circle"></i> ${error.error}</div>`;
             }
             
             if (error.details) {
@@ -86,11 +232,31 @@
             return output || JSON.stringify(error, null, 2);
         }
         
-        // Mark a step as active, complete, or failed
-        function updateStepStatus(stepId, status) {
+        // Update timeline step status
+        function updateTimelineStep(stepId, status) {
             const step = document.getElementById(stepId);
-            step.classList.remove('active', 'complete', 'failed');
-            step.classList.add(status);
+            const icon = step.querySelector('.timeline-icon');
+            
+            // Remove all status classes
+            icon.classList.remove('pending', 'active', 'complete', 'failed');
+            
+            // Add appropriate class and update icon
+            icon.classList.add(status);
+            
+            const iconElement = icon.querySelector('i');
+            if (status === 'active') {
+                iconElement.className = 'fas fa-spinner fa-spin';
+            } else if (status === 'complete') {
+                iconElement.className = 'fas fa-check';
+            } else if (status === 'failed') {
+                iconElement.className = 'fas fa-times';
+            } else if (stepId === 'step1') {
+                iconElement.className = 'fas fa-paper-plane';
+            } else if (stepId === 'step2') {
+                iconElement.className = 'fas fa-cogs';
+            } else if (stepId === 'step3') {
+                iconElement.className = 'fas fa-check-double';
+            }
         }
 
         async function verifyAadhar() {
@@ -98,80 +264,115 @@
             const responseDiv = document.getElementById('response');
             const loadingDiv = document.getElementById('loading');
             const verifyBtn = document.getElementById('verifyBtn');
+            const resultCard = document.getElementById('result-card');
             
-            // Reset steps
-            updateStepStatus('step1', 'pending');
-            updateStepStatus('step2', 'pending');
-            updateStepStatus('step3', 'pending');
+            // Reset timeline steps
+            updateTimelineStep('step1', 'pending');
+            updateTimelineStep('step2', 'pending');
+            updateTimelineStep('step3', 'pending');
+            
+            // Hide result card if it was previously shown
+            resultCard.style.display = 'none';
             
             // Validate input
             if (!isValidAadhar(aadhar)) {
-                responseDiv.style.display = 'block';
-                responseDiv.innerHTML = 'Error: Please enter a valid 12-digit Aadhar number';
-                responseDiv.classList.add('error');
+                document.getElementById('aadhar-validation').textContent = 'Please enter a valid 12-digit Aadhar number';
+                document.getElementById('aadhar-validation').className = 'input-validation error';
                 return;
             }
 
             try {
                 // Show loading, disable button
-                loadingDiv.style.display = 'block';
+                loadingDiv.style.display = 'flex';
                 verifyBtn.disabled = true;
-                responseDiv.style.display = 'none';
                 
                 // Step 1: Send verification request
-                updateStepStatus('step1', 'active');
+                updateTimelineStep('step1', 'active');
                 
-                // Generate a test OTP value (only for testing purposes)
-                const testOtp = "123456"; // This is only used in test environments
-                
-                // For production, use this line instead:
-                // const body = { id_number: aadhar };
-                
-                // For testing with automatic OTP validation:
-                const body = { id_number: aadhar, otp: testOtp };
-                
-                const res = await fetch('/send-otp', {
+                // Call the API endpoint for verification
+                const res = await fetch('/api/verify-aadhar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body),
+                    body: JSON.stringify({ id_number: aadhar }),
                 });
                 
-                updateStepStatus('step1', 'complete');
-                updateStepStatus('step2', 'active');
+                updateTimelineStep('step1', 'complete');
+                updateTimelineStep('step2', 'active');
                 
                 const data = await res.json();
                 
                 // Step completed
-                updateStepStatus('step2', 'complete');
-                updateStepStatus('step3', 'active');
+                updateTimelineStep('step2', 'complete');
+                updateTimelineStep('step3', 'active');
                 
+                // Display result
+                resultCard.style.display = 'block';
                 responseDiv.style.display = 'block';
                 
                 if (res.ok) {
-                    updateStepStatus('step3', 'complete');
+                    updateTimelineStep('step3', 'complete');
                     responseDiv.classList.remove('error');
                     responseDiv.classList.add('success');
                     
                     // Show verification success message
                     responseDiv.innerHTML = `
-                        <div class="success-title">Verification Successful</div>
+                        <div class="success-title"><i class="fas fa-check-circle"></i> Verification Successful</div>
                         <div class="success-details">Your Aadhar verification was completed successfully.</div>
                         <pre>${JSON.stringify(data, null, 2)}</pre>
                     `;
                 } else {
-                    updateStepStatus('step3', 'failed');
+                    updateTimelineStep('step3', 'failed');
                     responseDiv.classList.add('error');
+                    responseDiv.classList.remove('success');
                     responseDiv.innerHTML = formatErrorResponse(data);
                 }
             } catch (error) {
-                updateStepStatus('step3', 'failed');
+                updateTimelineStep('step3', 'failed');
+                resultCard.style.display = 'block';
                 responseDiv.style.display = 'block';
                 responseDiv.classList.add('error');
-                responseDiv.innerHTML = 'Error: ' + error.message;
+                responseDiv.classList.remove('success');
+                responseDiv.innerHTML = `<div class="error-title"><i class="fas fa-exclamation-circle"></i> Error</div>
+                                        <div class="error-message">${error.message}</div>`;
             } finally {
                 loadingDiv.style.display = 'none';
                 verifyBtn.disabled = false;
             }
+        }
+        
+        // Copy result to clipboard
+        function copyResult() {
+            const responseContent = document.getElementById('response').innerText;
+            navigator.clipboard.writeText(responseContent)
+                .then(() => {
+                    const copyBtn = document.querySelector('.icon-btn i');
+                    copyBtn.className = 'fas fa-check';
+                    setTimeout(() => {
+                        copyBtn.className = 'fas fa-copy';
+                    }, 2000);
+                })
+                .catch(err => console.error('Failed to copy: ', err));
+        }
+        
+        // Toggle accordion sections
+        function toggleAccordion(element) {
+            const content = element.nextElementSibling;
+            const icon = element.querySelector('i');
+            
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+                icon.className = 'fas fa-chevron-right';
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+                icon.className = 'fas fa-chevron-down';
+            }
+        }
+        
+        // Toggle dark/light theme
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            isDarkMode = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDarkMode ? 'enabled' : 'disabled');
         }
     </script>
 </body>

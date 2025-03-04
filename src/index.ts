@@ -1,3 +1,4 @@
+// src/index.ts
 import express, { Request, Response } from 'express';
 import axios, { AxiosRequestConfig } from 'axios';
 import jwt from 'jsonwebtoken';
@@ -6,26 +7,27 @@ import path from 'path';
 import { config } from './config';
 import { Logger } from './logger';
 
-// Initialize logger
+// Initialize logger and Express
 Logger.initialize();
-
-// Initialize Express application
 const app = express();
 app.use(express.json());
-
-// Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Define types for request bodies
-interface SendAndValidateOtpRequest {
+// Interfaces
+interface AadharVerifyRequest {
   id_number: string;
-  otp?: string; // Optional OTP for immediate validation
+  otp?: string; // Optional in production, added in testing
+  client_id?: string; // Will be generated and added
 }
 
-// Helper function to generate JWT token
+// Configuration for testing mode
+const IS_TESTING = true; // Set to false for production
+const MOCK_OTP = "123456"; // Mock OTP for testing
+
+// JWT Token Generation
 const generateToken = (): string => {
-  const timestamp = Math.floor(Date.now() / 1000); // Current timestamp in seconds
-  const reqid = uuidv4(); // Unique request ID
+  const timestamp = Math.floor(Date.now() / 1000);
+  const reqid = uuidv4();
   const payload = {
     timestamp,
     reqid,
@@ -40,40 +42,39 @@ const generateToken = (): string => {
   }
 };
 
-// Helper function to make API requests with retries and detailed logging
+// API Request Helper
 async function makeApiRequest(endpoint: string, data: any, token: string, retries = config.MAX_RETRIES) {
   const url = `${config.API_URL}${endpoint}`;
   
   const requestConfig: AxiosRequestConfig = {
+    method: 'POST',
+    url,
     headers: {
-      Token: token,
-      Authorisedkey: config.AUTHORISED_KEY,
+      'Token': token,
+      'Authorisedkey': config.AUTHORISED_KEY,
       'Content-Type': 'application/json',
       'User-Agent': config.PARTNER_ID,
-    }
+      'accept': 'application/json',
+    },
+    data,
   };
   
-  // Log the request
   const requestId = Logger.logRequest(url, 'POST', requestConfig.headers, data);
   
   try {
-    const response = await axios.post(url, data, requestConfig);
-    
-    // Log the successful response
+    const response = await axios(requestConfig);
     Logger.logResponse(requestId, response.status, response.data);
-    
     return response;
   } catch (error: any) {
-    // Log the error
     Logger.logError(requestId, error);
     
-    // Retry logic for specific errors
     if (retries > 0 && (
       !error.response || 
       error.response.status >= 500 || 
       error.response.status === 429
     )) {
       console.log(`Retrying request... (${config.MAX_RETRIES - retries + 1}/${config.MAX_RETRIES})`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
       return makeApiRequest(endpoint, data, token, retries - 1);
     }
     
@@ -81,108 +82,188 @@ async function makeApiRequest(endpoint: string, data: any, token: string, retrie
   }
 }
 
-// Combined route to send OTP and optionally validate it with the same token
-app.post('/send-otp', async (req: Request<{}, {}, SendAndValidateOtpRequest>, res: Response) => {
-  const { id_number, otp } = req.body;
+// Combined Send and Validate OTP Endpoint
+// @ts-ignore
+app.post('/api/verify-aadhar', async (req: Request<{}, {}, AadharVerifyRequest>, res: Response) => {
+  const { id_number } = req.body;
+  const client_id = uuidv4(); // Generate unique client_id for this verification
 
-  if (!id_number) {
-    return res.status(400).json({ error: 'Aadhar number is required' });
+  if (!id_number || !/^\d{12}$/.test(id_number)) {
+    return res.status(400).json({ error: 'Valid 12-digit Aadhar number is required' });
   }
 
-  console.log(`Processing request for Aadhar: ${id_number}${otp ? ' with OTP validation' : ''}`);
-  
   try {
-    // Generate a token for the API request
     const token = generateToken();
-    
-    // If OTP is provided, we can directly do a verification with the OTP
-    // For testing environments, this skips the actual OTP sending
-    if (otp) {
-      console.log(`Direct verification with OTP for Aadhar: ${id_number}`);
-      const verifyData = { id_number, otp };
+    const client_id = uuidv4(); // Generate unique client_id for this verification
+
+    if (IS_TESTING) {
+      console.log(`Testing mode: Processing Aadhar ${id_number} with mock OTP ${MOCK_OTP}`);
       
-      const response = await makeApiRequest('verification/aadhaar_sendotp', verifyData, token);
+      // Step 1: Send OTP request with client_id
+      const sendResponse = await makeApiRequest('verification/aadhaar_sendotp', 
+        { 
+          id_number,
+          client_id 
+        }, 
+        token
+      );
       
-      if (response.data.status === false) {
-        console.log('API returned error:', response.data.message);
-        return res.status(400).json({ 
-          error: 'KYC Verification Failed', 
-          details: response.data.message 
+      if (sendResponse.status !== 200) {
+        return res.status(sendResponse.status).json({
+          error: 'Failed to initiate verification',
+          details: sendResponse.data,
+          request: {
+            url: 'https://uat.paysprint.in/sprintverify-uat/api/v1/verification/aadhaar_sendotp',
+            headers: {
+              'Content-Type': 'application/json',
+              'Token': token,
+              'Authorisedkey': config.AUTHORISED_KEY,
+              'User-Agent': config.PARTNER_ID
+            },
+            body: { id_number, client_id }
+          }
         });
       }
+
+      // Step 2: Verify with mock OTP and same client_id
+      const verifyResponse = await makeApiRequest('verification/aadhaar_verifyotp', 
+        { 
+          id_number, 
+          otp: MOCK_OTP,
+          client_id 
+        }, 
+        token
+      );
       
-      return res.json({ 
-        message: 'KYC Verification Successful', 
-        data: response.data 
-      });
-    }
-    
-    // Regular flow - just send OTP
-    console.log(`Sending OTP for Aadhar: ${id_number}`);
-    const sendOtpData = { id_number };
-    const response = await makeApiRequest('verification/aadhaar_sendotp', sendOtpData, token);
-    
-    if (response.data.status === false) {
-      console.log('API returned error:', response.data.message);
-      return res.status(400).json({ 
-        error: 'Send OTP Failed', 
-        details: response.data.message 
-      });
-    }
-    
-    return res.json({ 
-      message: 'OTP sent successfully', 
-      data: response.data 
-    });
-  } catch (error: any) {
-    console.error('API error:', error.message);
-    if (error.response) {
-      return res.status(error.response.status).json({ 
-        error: 'API Error', 
-        details: error.response.data 
-      });
-    } else if (error.request) {
-      return res.status(503).json({ 
-        error: 'Service Unavailable',
-        details: 'No response received from the API server. Please try again later.'
-      });
+      if (verifyResponse.status === 200) {
+        return res.json({
+          message: 'Verification successful (Test Mode)',
+          data: verifyResponse.data,
+          mockOtp: MOCK_OTP,
+          client_id,
+          requestDetails: {
+            sendOtp: {
+              url: 'https://uat.paysprint.in/sprintverify-uat/api/v1/verification/aadhaar_sendotp',
+              headers: {
+                'Content-Type': 'application/json',
+                'Token': token,
+                'Authorisedkey': config.AUTHORISED_KEY,
+                'User-Agent': config.PARTNER_ID
+              },
+              body: { id_number, client_id }
+            },
+            verifyOtp: {
+              url: 'https://uat.paysprint.in/sprintverify-uat/api/v1/verification/aadhaar_verifyotp',
+              headers: {
+                'Content-Type': 'application/json',
+                'Token': token,
+                'Authorisedkey': config.AUTHORISED_KEY,
+                'User-Agent': config.PARTNER_ID
+              },
+              body: { id_number, otp: MOCK_OTP, client_id }
+            }
+          }
+        });
+      } else {
+        return res.status(verifyResponse.status).json({
+          error: 'Verification failed (Test Mode)',
+          details: verifyResponse.data,
+          client_id,
+          request: {
+            url: 'https://uat.paysprint.in/sprintverify-uat/api/v1/verification/aadhaar_verifyotp',
+            headers: {
+              'Content-Type': 'application/json',
+              'Token': token,
+              'Authorisedkey': config.AUTHORISED_KEY,
+              'User-Agent': config.PARTNER_ID
+            },
+            body: { id_number, otp: MOCK_OTP, client_id }
+          }
+        });
+      }
     } else {
-      return res.status(500).json({ 
-        error: 'Request Setup Error',
-        details: error.message
-      });
+      // Production mode: Just send OTP
+      const response = await makeApiRequest('verification/aadhaar_sendotp', 
+        { 
+          id_number,
+          client_id 
+        }, 
+        token
+      );
+      
+      if (response.status === 200) {
+        return res.json({
+          message: 'OTP sent successfully',
+          data: response.data,
+          client_id
+        });
+      } else {
+        return res.status(response.status).json({
+          error: 'Failed to send OTP',
+          details: response.data,
+          request: {
+            url: 'https://uat.paysprint.in/sprintverify-uat/api/v1/verification/aadhaar_sendotp',
+            headers: {
+              'Content-Type': 'application/json',
+              'Token': token,
+              'Authorisedkey': config.AUTHORISED_KEY,
+              'User-Agent': config.PARTNER_ID
+            },
+            body: { id_number, client_id }
+          }
+        });
+      }
     }
+  } catch (error: any) {
+    const status = error.response?.status || 500;
+    const details = error.response?.data || error.message;
+    return res.status(status).json({
+      error: 'API Error',
+      details,
+      request: {
+        url: 'https://uat.paysprint.in/sprintverify-uat/api/v1/verification/aadhaar_sendotp',
+        headers: {
+          'Content-Type': 'application/json',
+          'Token': '[Generated JWT]',
+          'Authorisedkey': config.AUTHORISED_KEY,
+          'User-Agent': config.PARTNER_ID
+        },
+        body: { id_number, client_id }
+      }
+    });
   }
 });
 
 // Debugging endpoint to view logs
-app.get('/api/debug/logs', (req, res) => {
+app.get('/api/debug/logs', (req: Request, res: Response) => {
   res.json(Logger.getLogs());
 });
 
 // Debugging endpoint to clear logs
-app.post('/api/debug/logs/clear', (req, res) => {
+app.post('/api/debug/logs/clear', (req: Request, res: Response) => {
   Logger.clearLogs();
   res.json({ message: 'Logs cleared successfully' });
 });
 
-// Root route to serve the frontend
+// Root route
 app.get('/', (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Config status endpoint (excluding sensitive data)
+// Config status endpoint
 app.get('/api/config-status', (req: Request, res: Response) => {
   res.json({
     apiUrl: config.API_URL,
     partnerId: config.PARTNER_ID,
     debugMode: config.DEBUG,
-    serverPort: config.PORT
+    serverPort: config.PORT,
+    testingMode: IS_TESTING
   });
 });
 
-// Start the server
+// Start Server
 app.listen(config.PORT, () => {
   console.log(`Server running on port ${config.PORT}`);
-  console.log(`Open http://localhost:${config.PORT} in your browser to test KYC flow`);
+  console.log(`Testing mode: ${IS_TESTING}`);
+  console.log(`Open http://localhost:${config.PORT} in your browser to test`);
 });

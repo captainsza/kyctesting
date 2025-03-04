@@ -1,164 +1,55 @@
-/**
- * Enhanced Logger utility for API debugging with file output
- */
-import fs from 'fs';
-import path from 'path';
-import { format as formatDate } from 'date-fns';
+// src/logger.ts
+import { v4 as uuidv4 } from 'uuid';
 
 export class Logger {
-  private static lastRequestId = 0;
-  private static logs: Array<{ id: number, timestamp: string, type: string, message: string, data?: any }> = [];
-  private static readonly MAX_LOGS = 100; // Keep last 100 logs in memory
-  private static logDir = path.join(__dirname, '../logs');
-  private static logFile = path.join(Logger.logDir, `api_${formatDate(new Date(), 'yyyyMMdd')}.log`);
-  
-  /**
-   * Initialize the logger and create log directory if it doesn't exist
-   */
-  static initialize(): void {
-    if (!fs.existsSync(this.logDir)) {
-      fs.mkdirSync(this.logDir, { recursive: true });
-    }
-    
-    const startupMessage = `\n========== KYC API Logger Started at ${new Date().toISOString()} ==========\n\n`;
-    fs.appendFileSync(this.logFile, startupMessage);
-    console.log(`Logger initialized. Writing logs to: ${this.logFile}`);
+  private static logs: any[] = [];
+
+  static initialize() {
+    console.log('Logger initialized');
   }
 
-  /**
-   * Log a request with all details
-   */
-  static logRequest(url: string, method: string, headers: any, data?: any): number {
-    const requestId = ++Logger.lastRequestId;
-    const timestamp = new Date().toISOString();
-    
-    const headerJson = JSON.stringify(headers, null, 2);
-    const dataJson = data ? JSON.stringify(data, null, 2) : 'null';
-    
-    const logMessage = [
-      `\n━━━━━━━━━━━━━━━━ REQUEST #${requestId} ━━━━━━━━━━━━━━━━`,
-      `Timestamp: ${timestamp}`,
-      `Method: ${method}`,
-      `URL: ${url}`,
-      `Headers: ${headerJson}`,
-      `Body: ${dataJson}`,
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
-    ].join('\n');
-    
-    console.log(logMessage);
-    try {
-      fs.appendFileSync(this.logFile, logMessage);
-    } catch (err) {
-      console.error('Error writing to log file:', err);
-    }
-    
-    this.addLog({
-      id: requestId,
-      timestamp,
-      type: 'REQUEST',
-      message: `[REQ #${requestId}] ${method} ${url}`,
-      data: { headers, body: data }
-    });
-    
+  static logRequest(url: string, method: string, headers: any, body: any): string {
+    const requestId = uuidv4();
+    const logEntry = {
+      requestId,
+      timestamp: new Date().toISOString(),
+      type: 'request',
+      url,
+      method,
+      headers,
+      body
+    };
+    this.logs.push(logEntry);
     return requestId;
   }
 
-  /**
-   * Log a successful response with all details
-   */
-  static logResponse(requestId: number, status: number, data: any): void {
-    const timestamp = new Date().toISOString();
-    const dataJson = JSON.stringify(data, null, 2);
-    
-    const logMessage = [
-      `\n━━━━━━━━━━━━━━━━ RESPONSE #${requestId} ━━━━━━━━━━━━━━━━`,
-      `Timestamp: ${timestamp}`,
-      `Status: ${status}`,
-      `Response Body: ${dataJson}`,
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
-    ].join('\n');
-    
-    console.log(logMessage);
-    try {
-      fs.appendFileSync(this.logFile, logMessage);
-    } catch (err) {
-      console.error('Error writing to log file:', err);
-    }
-    
-    this.addLog({
-      id: requestId,
-      timestamp,
-      type: 'RESPONSE',
-      message: `[RES #${requestId}] Status: ${status}`,
-      data: { status, body: data }
-    });
+  static logResponse(requestId: string, status: number, data: any) {
+    const logEntry = {
+      requestId,
+      timestamp: new Date().toISOString(),
+      type: 'response',
+      status,
+      data
+    };
+    this.logs.push(logEntry);
   }
 
-  /**
-   * Log an error response with all details
-   */
-  static logError(requestId: number, error: any): void {
-    const timestamp = new Date().toISOString();
-    const status = error.response?.status || 'No Status';
-    
-    let logParts = [
-      `\n━━━━━━━━━━━━━━━━ ERROR #${requestId} ━━━━━━━━━━━━━━━━`,
-      `Timestamp: ${timestamp}`,
-      `Status: ${status}`,
-      `Error Message: ${error.message}`
-    ];
-    
-    if (error.response) {
-      logParts.push(`Response Data: ${JSON.stringify(error.response.data, null, 2)}`);
-    } else if (error.request) {
-      logParts.push(`No response received. Request details: ${error.request}`);
-    }
-    
-    logParts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-    
-    const logMessage = logParts.join('\n');
-    
-    console.log(logMessage);
-    try {
-      fs.appendFileSync(this.logFile, logMessage);
-    } catch (err) {
-      console.error('Error writing to log file:', err);
-    }
-    
-    this.addLog({
-      id: requestId,
-      timestamp,
-      type: 'ERROR',
-      message: `[ERR #${requestId}] Status: ${status}`,
-      data: {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
-      }
-    });
+  static logError(requestId: string, error: any) {
+    const logEntry = {
+      requestId,
+      timestamp: new Date().toISOString(),
+      type: 'error',
+      error: error.message,
+      details: error.response?.data || error
+    };
+    this.logs.push(logEntry);
   }
 
-  /**
-   * Add a log entry to the memory store
-   */
-  private static addLog(log: any): void {
-    this.logs.push(log);
-    if (this.logs.length > this.MAX_LOGS) {
-      this.logs = this.logs.slice(-this.MAX_LOGS);
-    }
-  }
-
-  /**
-   * Get all logs
-   */
-  static getLogs(): any[] {
+  static getLogs() {
     return this.logs;
   }
 
-  /**
-   * Clear all logs
-   */
-  static clearLogs(): void {
+  static clearLogs() {
     this.logs = [];
   }
 }
