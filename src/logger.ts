@@ -1,123 +1,162 @@
 /**
- * Logger utility for API debugging
+ * Enhanced Logger utility for API debugging with file output
  */
+import fs from 'fs';
+import path from 'path';
+import { format as formatDate } from 'date-fns';
+
 export class Logger {
   private static lastRequestId = 0;
   private static logs: Array<{id: number, timestamp: string, type: string, message: string, data?: any}> = [];
-  private static readonly MAX_LOGS = 50; // Keep only the last 50 logs in memory
+  private static readonly MAX_LOGS = 100; // Keep last 100 logs in memory
+  private static logDir = path.join(__dirname, '../logs');
+  private static logFile = path.join(Logger.logDir, `api_${formatDate(new Date(), 'yyyyMMdd')}.log`);
+  
+  /**
+   * Initialize the logger and create log directory if it doesn't exist
+   */
+  static initialize(): void {
+    // Create logs directory if it doesn't exist
+    if (!fs.existsSync(this.logDir)) {
+      fs.mkdirSync(this.logDir, { recursive: true });
+    }
+    
+    // Write header to log file
+    const startupMessage = `\n========== KYC API Logger Started at ${new Date().toISOString()} ==========\n\n`;
+    fs.appendFileSync(this.logFile, startupMessage);
+    console.log(`Logger initialized. Writing logs to: ${this.logFile}`);
+  }
 
   /**
-   * Log a request with detailed information
+   * Log a request with all details (nothing hidden)
    */
   static logRequest(url: string, method: string, headers: any, data?: any): number {
     const requestId = ++Logger.lastRequestId;
     const timestamp = new Date().toISOString();
     
-    // Format headers for better readability, hiding sensitive info
-    const sanitizedHeaders = { ...headers };
+    // Create a full log message for the request
+    const headerJson = JSON.stringify(headers, null, 2);
+    const dataJson = data ? JSON.stringify(data, null, 2) : 'null';
     
-    // Hide sensitive information in headers
-    if (sanitizedHeaders.Authorization) {
-      sanitizedHeaders.Authorization = '[HIDDEN]';
-    }
-    if (sanitizedHeaders.Token) {
-      sanitizedHeaders.Token = sanitizedHeaders.Token.substring(0, 10) + '...[HIDDEN]';
-    }
-    if (sanitizedHeaders.Authorisedkey) {
-      sanitizedHeaders.Authorisedkey = sanitizedHeaders.Authorisedkey.substring(0, 10) + '...[HIDDEN]';
+    const logMessage = [
+      `\n━━━━━━━━━━━━━━━━ REQUEST #${requestId} ━━━━━━━━━━━━━━━━`,
+      `Timestamp: ${timestamp}`,
+      `Method: ${method}`,
+      `URL: ${url}`,
+      `Headers: ${headerJson}`,
+      `Body: ${dataJson}`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+    ].join('\n');
+    
+    // Log to console
+    console.log(logMessage);
+    
+    // Write to file - complete unredacted information
+    try {
+      fs.appendFileSync(this.logFile, logMessage);
+    } catch (err) {
+      console.error('Error writing to log file:', err);
     }
     
-    const message = `[REQ #${requestId}] ${method} ${url}`;
-    const logEntry = {
+    // Store in memory (for API access)
+    this.addLog({
       id: requestId,
       timestamp,
       type: 'REQUEST',
-      message,
+      message: `[REQ #${requestId}] ${method} ${url}`,
       data: {
-        headers: sanitizedHeaders,
+        headers,
         body: data
       }
-    };
+    });
     
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(message);
-    console.log('Timestamp:', timestamp);
-    console.log('Headers:', JSON.stringify(sanitizedHeaders, null, 2));
-    
-    if (data) {
-      console.log('Body:', JSON.stringify(data, null, 2));
-    }
-    
-    this.addLog(logEntry);
     return requestId;
   }
 
   /**
-   * Log a successful response
+   * Log a successful response with all details
    */
   static logResponse(requestId: number, status: number, data: any): void {
     const timestamp = new Date().toISOString();
-    const message = `[RES #${requestId}] Status: ${status}`;
-    const logEntry = {
+    const dataJson = JSON.stringify(data, null, 2);
+    
+    const logMessage = [
+      `\n━━━━━━━━━━━━━━━━ RESPONSE #${requestId} ━━━━━━━━━━━━━━━━`,
+      `Timestamp: ${timestamp}`,
+      `Status: ${status}`,
+      `Response Body: ${dataJson}`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+    ].join('\n');
+    
+    // Log to console
+    console.log(logMessage);
+    
+    // Write to file
+    try {
+      fs.appendFileSync(this.logFile, logMessage);
+    } catch (err) {
+      console.error('Error writing to log file:', err);
+    }
+    
+    // Store in memory
+    this.addLog({
       id: requestId,
       timestamp,
       type: 'RESPONSE',
-      message,
+      message: `[RES #${requestId}] Status: ${status}`,
       data: {
         status,
         body: data
       }
-    };
-    
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(message);
-    console.log('Timestamp:', timestamp);
-    console.log('Response Data:', JSON.stringify(data, null, 2));
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-    
-    this.addLog(logEntry);
+    });
   }
 
   /**
-   * Log an error response
+   * Log an error response with all details
    */
   static logError(requestId: number, error: any): void {
     const timestamp = new Date().toISOString();
     const status = error.response?.status || 'No Status';
-    const message = `[ERR #${requestId}] Status: ${status}`;
     
-    let errorData: any = {
-      message: error.message
-    };
+    let logParts = [
+      `\n━━━━━━━━━━━━━━━━ ERROR #${requestId} ━━━━━━━━━━━━━━━━`,
+      `Timestamp: ${timestamp}`,
+      `Status: ${status}`,
+      `Error Message: ${error.message}`
+    ];
     
     if (error.response) {
-      errorData.status = error.response.status;
-      errorData.data = error.response.data;
+      logParts.push(`Response Data: ${JSON.stringify(error.response.data, null, 2)}`);
+    } else if (error.request) {
+      logParts.push(`No response received. Request details: ${error.request}`);
     }
     
-    const logEntry = {
+    logParts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    
+    const logMessage = logParts.join('\n');
+    
+    // Log to console
+    console.log(logMessage);
+    
+    // Write to file
+    try {
+      fs.appendFileSync(this.logFile, logMessage);
+    } catch (err) {
+      console.error('Error writing to log file:', err);
+    }
+    
+    // Store in memory
+    this.addLog({
       id: requestId,
       timestamp,
       type: 'ERROR',
-      message,
-      data: errorData
-    };
-    
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(message);
-    console.log('Timestamp:', timestamp);
-    console.log('Error Message:', error.message);
-    
-    if (error.response) {
-      console.log('Status:', error.response.status);
-      console.log('Response Data:', JSON.stringify(error.response.data, null, 2));
-    } else if (error.request) {
-      console.log('No response received. Request details:', error.request);
-    }
-    
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-    
-    this.addLog(logEntry);
+      message: `[ERR #${requestId}] Status: ${status}`,
+      data: {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      }
+    });
   }
 
   /**
